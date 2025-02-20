@@ -1,0 +1,795 @@
+% EPTCS Style distribution v1.7.0 released May 23, 2022.
+% https://github.com/EPTCS/style
+\documentclass[submission,copyright,creativecommons]{eptcs}
+
+\include{preamble}
+
+\title{Uncertainty and Learning in Design Problems}
+% \author{Rob van Glabbeek
+% \institute{NICTA\\ Sydney, Australia}
+% \institute{School of Computer Science and Engineering\\
+% University of New South Wales\thanks{A fine university.}\\
+% Sydney, Australia}
+% \email{rvg@cs.stanford.edu}
+% \and
+% Co Author \qquad\qquad Yet S. Else
+% \institute{Stanford University\\
+% California, USA}
+% \email{\quad is@gmail.com \quad\qquad somebody@else.org}
+% }
+% \def\titlerunning{A Longtitled Paper}
+\def\authorrunning{M. Furter, Y. Huang, G. Zardini}
+\author{
+Marius Furter
+\and
+Yujun Huang
+\and
+Gioele Zardini
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This is the abstract
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+[Introduce co-design. Previous uncertainty representation with bounds. Why it is insufficient (too conservative, ect.~)]. 
+
+This paper extends monotone co-design by introducing a general theory for uncertain design problems (DPs). The theory accommodates any type of uncertainty that can be represented by a symmetric monoidal monad. This includes intervals, subsets, and distributions of DPs. Furthermore, the uncertainty is allowed to depend on external parameters. This enables us to represent decisions and learn from data. In the case of vanilla DPs, learning proceeds by optimization. When using distributions, we can apply Bayesian inference and decision theory.
+
+To construct uncertain DPs, we take the traditional category $\DP$ design problems and replace its hom-sets with more general collections. Since replacement proceeds along lax monoidal functors, this procedure describes a change of base for enriched categories. For the cases we consider, the construction preserves both the monoidal and compact closed structure of $\DP$. Moreover, it is functorial, allowing us to transfer additional co-design concepts to the uncertain case.
+
+For example, to get parametric distributions, we replace $\DP(P,Q)$ with the slice category $\Stoch / \DP(P,Q)$ whose objects are Markov kernels $A \to \DP(P,Q)$ and whose arrows express reparameterization. As a result, we obtain a compact closed monoidal 2-category whose 1-cells are parametric distributions which can be reparametrized by 2-cells.
+
+We note at the outset that we expect these techniques to be useful outside of co-design. For instance, the construction can be used to endow any symmetric monoidal category with parametric uncertainty. Moreover, in addition to the monoidal structure, this process is expected to preserve other common structures, such as supplies \cite{fong_supplying_2020}. 
+
+The remainder of the paper is structured as follows. We first introduce the required background on enriched categories and change of base in Section \ref{sec:background}. We then describe specific replacement functors useful for introducing parametric uncertainty in Section \ref{sec:parametric-uncertainty}. Section \ref{sec:learning-dps} forms the core of the paper in which we describe several categories of uncertain DPs and demonstrate their usefulness. We conclude by hinting at other interesting applications of the techniques presented.
+
+\paragraph{Conventions and Notation.} By 2-category we will always mean \emph{strict} 2-categories. The same goes for other 2-categorical concepts.
+
+\paragraph{Acknowledgments.}
+
+\section{Background}\label{sec:background}
+This section introduces enriched categories and the change of base construction. Moreover, it explains that change of base is 2-functorial and preserves monoidal structure. The latter fact originates in Geoff Cruttwell's PhD thesis \cite{cruttwell_normed_2008} which provides exceptionally clear exposition for those seeking more detail.
+
+\subsection{Monoidal categories}
+
+\begin{definition}[Monoidal category]
+    A \emph{monoidal category} $(\V, \otimes, I)$, consists of a category, $\V$, a functor $\otimes: \V \times \V \to \V$, a unit object $I \in \Ob(\V)$, and natural isomorphisms with components
+    \[
+        \alpha_{A,B,C} : (A \otimes B) \otimes C \cong A \otimes (B \otimes C), \qquad 
+        \rho_A : A \otimes I \cong A, \qquad
+        \lambda_A : I \otimes A \cong A,
+    \]
+    satisfying the pentagon and triangle identities:
+       % https://q.uiver.app/#q=WzAsNSxbMCwwLCIoKEEgXFxvdGltZXMgQikgXFxvdGltZXMgQykgXFxvdGltZXMgRCJdLFsyLDAsIihBIFxcb3RpbWVzIChCIFxcb3RpbWVzIEMpKSBcXG90aW1lcyBEIl0sWzAsMSwiKEEgXFxvdGltZXMgQikgXFxvdGltZXMgKEMgXFxvdGltZXMgRCkiXSxbMiwxLCJBIFxcb3RpbWVzICgoQiBcXG90aW1lcyBDKSBcXG90aW1lcyBEKSJdLFsxLDIsIkEgXFxvdGltZXMgKEIgXFxvdGltZXMgKEMgXFxvdGltZXMgRCkpIl0sWzAsMSwiXFxhbHBoYV97QSxCLEN9IFxcb3RpbWVzIEQiXSxbMCwyLCJcXGFscGhhX3tBIFxcb3RpbWVzIEIsIEMsIER9IiwyXSxbMiw0LCJcXGFscGhhX3tBLEIsQyBcXG90aW1lcyBEfSIsMl0sWzEsMywiXFxhbHBoYV97QSxCIFxcb3RpbWVzIEMsRH0iXSxbMyw0LCJBIFxcb3RpbWVzIFxcYWxwaGFfe0IsQyxEfSJdXQ==
+    \[\begin{tikzcd}[cramped,column sep=tiny]
+    	{((A \otimes B) \otimes C) \otimes D} && {(A \otimes (B \otimes C)) \otimes D} \\
+    	{(A \otimes B) \otimes (C \otimes D)} && {A \otimes ((B \otimes C) \otimes D)} \\
+    	& {A \otimes (B \otimes (C \otimes D))}
+    	\arrow["{\alpha_{A,B,C} \otimes D}", from=1-1, to=1-3]
+    	\arrow["{\alpha_{A \otimes B, C, D}}"', from=1-1, to=2-1]
+    	\arrow["{\alpha_{A,B \otimes C,D}}", from=1-3, to=2-3]
+    	\arrow["{\alpha_{A,B,C \otimes D}}"', from=2-1, to=3-2]
+    	\arrow["{A \otimes \alpha_{B,C,D}}", from=2-3, to=3-2]
+    \end{tikzcd}
+    \qquad \qquad
+       % https://q.uiver.app/#q=WzAsMyxbMSwwLCIoQSBcXG90aW1lcyBJKSBcXG90aW1lcyBCIl0sWzEsMSwiQSBcXG90aW1lcyAoSSBcXG90aW1lcyBCKSJdLFswLDEsIkEgXFxvdGltZXMgQiJdLFswLDEsIlxcYWxwaGFfe0EsSSxCfSJdLFswLDIsIlxccmhvX0EgXFxvdGltZXMgQiIsMl0sWzEsMiwiQSBcXG90aW1lcyBcXGxhbWJkYV9CIl1d
+    \begin{tikzcd}[cramped]
+    	& {(A \otimes I) \otimes B} \\
+    	{A \otimes B} & {A \otimes (I \otimes B)}
+    	\arrow["{\rho_A \otimes B}"', from=1-2, to=2-1]
+    	\arrow["{\alpha_{A,I,B}}", from=1-2, to=2-2]
+    	\arrow["{A \otimes \lambda_B}", from=2-2, to=2-1]
+    \end{tikzcd}\]
+\end{definition}
+
+\begin{definition}(Symmetric monoidal category)
+    A monoidal category $(\V, \otimes, I)$ is called \emph{symmetric} if it comes equipped with a natural transformation $\sigma_{A,B}: A \otimes B \to B \otimes A$ that satisfies
+    \[
+    % https://q.uiver.app/#q=WzAsNixbMCwwLCIoQSBcXG90aW1lcyBCKSBcXG90aW1lcyBDIl0sWzEsMCwiKEIgXFxvdGltZXMgQSkgXFxvdGltZXMgQyJdLFswLDEsIkEgXFxvdGltZXMgKEIgXFxvdGltZXMgQykiXSxbMSwxLCIoQiBcXG90aW1lcyBDKSBcXG90aW1lcyBBIl0sWzIsMCwiQiBcXG90aW1lcyAoQSBcXG90aW1lcyBDKSJdLFsyLDEsIkIgXFxvdGltZXMgKEMgXFxvdGltZXMgQSkiXSxbMCwyLCJcXGFscGhhX3tBLEIsQ30iLDJdLFsyLDMsIlxcc2lnbWFfe0EsIEIgXFxvdGltZXMgQ30iLDJdLFsxLDQsIlxcYWxwaGFfe0IsQSxDfSJdLFs0LDUsIjEgXFxvdGltZXMgXFxzaWdtYV97QSxDfSJdLFswLDEsIlxcc2lnbWFfe0EsQn0gXFxvdGltZXMgMSJdLFszLDUsIlxcYWxwaGFfe0IsQyxBfSIsMl1d
+    \begin{tikzcd}[cramped, sep = scriptsize]
+    	{(A \otimes B) \otimes C} & {(B \otimes A) \otimes C} & {B \otimes (A \otimes C)} \\
+    	{A \otimes (B \otimes C)} & {(B \otimes C) \otimes A} & {B \otimes (C \otimes A)}
+    	\arrow["{\sigma_{A,B} \otimes 1}", from=1-1, to=1-2]
+    	\arrow["{\alpha_{A,B,C}}"', from=1-1, to=2-1]
+    	\arrow["{\alpha_{B,A,C}}", from=1-2, to=1-3]
+    	\arrow["{1 \otimes \sigma_{A,C}}", from=1-3, to=2-3]
+    	\arrow["{\sigma_{A, B \otimes C}}"', from=2-1, to=2-2]
+    	\arrow["{\alpha_{B,C,A}}"', from=2-2, to=2-3]
+    \end{tikzcd}
+    \qquad \quad
+    % https://q.uiver.app/#q=WzAsMyxbMCwwLCJBIFxcb3RpbWVzIEkiXSxbMSwwLCJJIFxcb3RpbWVzIEEiXSxbMSwxLCJBIl0sWzAsMiwiXFxyaG9fQSIsMl0sWzEsMiwiXFxsYW1iZGFfQSJdLFswLDEsIlxcc2lnbWFfe0EsSX0iXV0=
+    \begin{tikzcd}[cramped, sep = scriptsize]
+    	{A \otimes I} & {I \otimes A} \\
+    	& A
+    	\arrow["{\sigma_{A,I}}", from=1-1, to=1-2]
+    	\arrow["{\rho_A}"', from=1-1, to=2-2]
+    	\arrow["{\lambda_A}", from=1-2, to=2-2]
+    \end{tikzcd}
+    \qquad \quad
+   % https://q.uiver.app/#q=WzAsMyxbMCwwLCJBIFxcb3RpbWVzIEIiXSxbMSwwLCJCIFxcb3RpbWVzIEEiXSxbMSwxLCJBIFxcb3RpbWVzIEIiXSxbMCwyLCIiLDAseyJsZXZlbCI6Miwic3R5bGUiOnsiaGVhZCI6eyJuYW1lIjoibm9uZSJ9fX1dLFswLDEsIlxcc2lnbWFfe0EsQn0iXSxbMSwyLCJcXHNpZ21hX3tCLEF9Il1d
+    \begin{tikzcd}[cramped, sep = scriptsize]
+    	{A \otimes B} & {B \otimes A} \\
+    	& {A \otimes B}
+    	\arrow["{\sigma_{A,B}}", from=1-1, to=1-2]
+    	\arrow[equals, from=1-1, to=2-2]
+    	\arrow["{\sigma_{B,A}}", from=1-2, to=2-2]
+    \end{tikzcd}
+    \]
+\end{definition}
+
+\begin{example}
+    Any category with finite products is monoidal, with the terminal object as unit. We will make use of many examples of this kind, including $\Set$ (sets \& functions), $\Pos$ (partially ordered sets \& monotone functions), $\Top$ (topological spaces \& continuous functions), $\Meas$ (measurable spaces \& measurable functions), and $\smcat$ (small categories \& functors).
+\end{example}
+
+\begin{example}
+    Let $\Bool := \{ \bot \leq \top\}$ be the poset of truth values. It is monoidal under conjunction $\wedge$ with monoidal unit $\top$.
+\end{example}
+
+\begin{example}
+    Given posets $\F$ and $\R$, a \emph{feasibility relation} $\Phi: \F \to \R$ is a monotone map $\op{\F} \times \R \to \Bool$. We can compose the former with another feasibility relation $\Psi : \op{\R} \times \Q \to \Bool$ according to $(\Phi \then \Psi)(f,q) := \bigvee_{r \in \R} \Phi(f,r) \wedge \Psi(r,q)$. Posets and feasibility relations assemble into a category $\DP$ of \emph{design problems}. $\DP$ is monoidal under the Cartesian product of posets and conjunction of feasibility relations $(\Phi_1 \otimes \Phi_2)((f_1,f_2),(r_1,r_2)) := \Phi_1(f_1,r_1) \wedge \Phi_2(f_2,r_1)$. Note that this is not a categorical product. For a detailed account of $\DP$, see \cite{fong_invitation_2019, zardiniCoDesignComplexSystems2023}.
+\end{example}
+
+\begin{definition}[Monoidal functor]
+    Let $(\V,\otimes,I)$ and $(\W,\bullet, J)$ be monoidal categories. A \emph{(lax) monoidal functor} $N: \V \to \W$ is a functor from $\V$ to $\W$, along with natural transformations whose components
+    \[ N_\epsilon : J \to NI, \qquad \qquad \widetilde N_{A,B}: NA \bullet NB \to N(A \otimes B), \]
+    satisfy associativity and unitality conditions:
+    
+    \begin{equation}\label{tikzeq:monoidal-functor}
+        % https://q.uiver.app/#q=WzAsNixbMCwwLCIoTkEgXFxidWxsZXQgTkIpIFxcYnVsbGV0IE5DIl0sWzIsMCwiTkEgXFxidWxsZXQgKE5CIFxcYnVsbGV0IE5DKSJdLFsyLDEsIk5BIFxcYnVsbGV0IE4oQiBcXG90aW1lcyBDKSJdLFsyLDIsIk4oQSBcXG90aW1lcyAoQiBcXG90aW1lcyBDKSkiXSxbMCwyLCJOKChBIFxcb3RpbWVzIEIpIFxcb3RpbWVzIEMpIl0sWzAsMSwiTihBIFxcb3RpbWVzIEIpIFxcYnVsbGV0IE5DIl0sWzAsMSwiXFxhbHBoYV9cXEQiXSxbMSwyLCIxIFxcYnVsbGV0IFxcd2lkZXRpbGRlIE5fe0IsQ30iXSxbMiwzLCJcXHdpZGV0aWxkZSBOX3tBLEIgXFxvdGltZXMgQ30iXSxbMCw1LCJcXHdpZGV0aWxkZSBOX3tBLEJ9IFxcYnVsbGV0IDEiLDJdLFs1LDQsIlxcd2lkZXRpbGRlIE5fe0EgXFxvdGltZXMgQiwgQ30iLDJdLFs0LDMsIk5cXGFscGhhX1xcQyIsMl1d
+        \begin{tikzcd}[cramped, sep = scriptsize]
+        	{(NA \bullet NB) \bullet NC} && {NA \bullet (NB \bullet NC)} \\
+        	{N(A \otimes B) \bullet NC} && {NA \bullet N(B \otimes C)} \\
+        	{N((A \otimes B) \otimes C)} && {N(A \otimes (B \otimes C))}
+        	\arrow["{\alpha_\D}", from=1-1, to=1-3]
+        	\arrow["{\widetilde N_{A,B} \bullet 1}"', from=1-1, to=2-1]
+        	\arrow["{1 \bullet \widetilde N_{B,C}}", from=1-3, to=2-3]
+        	\arrow["{\widetilde N_{A \otimes B, C}}"', from=2-1, to=3-1]
+        	\arrow["{\widetilde N_{A,B \otimes C}}", from=2-3, to=3-3]
+        	\arrow["{N\alpha_\C}"', from=3-1, to=3-3]
+        \end{tikzcd}
+    \qquad \qquad \qquad
+    % https://q.uiver.app/#q=WzAsOCxbMCwwLCJOQSBcXGJ1bGxldCBKIl0sWzEsMCwiTkEgXFxidWxsZXQgTkkiXSxbMCwxLCJOQSJdLFsxLDEsIk4oQSBcXG90aW1lcyBJKSJdLFswLDIsIkogXFxidWxsZXQgTkIiXSxbMSwyLCJOSSBcXGJ1bGxldCBOQiJdLFswLDMsIk5CIl0sWzEsMywiTihJIFxcb3RpbWVzIEIpIl0sWzAsMSwiMSBcXGJ1bGxldCBOX1xcZXBzaWxvbiJdLFsxLDMsIlxcd2lkZXRpbGRlIE5fe0EsSX0iXSxbMCwyLCJcXHJob19cXEQiLDJdLFsyLDMsIk5cXHJob19cXEMiLDJdLFs0LDUsIk5fXFxlcHNpbG9uIFxcYnVsbGV0IDEiXSxbNCw2LCJcXGxhbWJkYV9cXEQiLDJdLFs2LDcsIk5cXGxhbWJkYV9cXEMiLDJdLFs1LDcsIlxcd2lkZXRpbGRlIE5fe0ksIEJ9Il1d
+    \begin{tikzcd}[cramped, sep = scriptsize]
+    	{NA \bullet J} & {NA \bullet NI} \\
+    	NA & {N(A \otimes I)} \\
+    	{J \bullet NB} & {NI \bullet NB} \\
+    	NB & {N(I \otimes B)}
+    	\arrow["{1 \bullet N_\epsilon}", from=1-1, to=1-2]
+    	\arrow["{\rho_\D}"', from=1-1, to=2-1]
+    	\arrow["{\widetilde N_{A,I}}", from=1-2, to=2-2]
+    	\arrow["{N\rho_\C}"', from=2-1, to=2-2]
+    	\arrow["{N_\epsilon \bullet 1}", from=3-1, to=3-2]
+    	\arrow["{\lambda_\D}"', from=3-1, to=4-1]
+    	\arrow["{\widetilde N_{I, B}}", from=3-2, to=4-2]
+    	\arrow["{N\lambda_\C}"', from=4-1, to=4-2]
+    \end{tikzcd}
+    \end{equation}
+    If $N_\epsilon$ and $\widetilde N$ are isomorphisms, we call $N$ \emph{strong}; if they are identities, we call $N$ \emph{strict}. If $\V$ and $\W$ are braided (resp.~symmetric), then $N$ is called \emph{braided (resp.~symmetric)} if it preserves $\sigma$:
+    \begin{equation}\label{tikzeq:monoidal-functor-symmetric}
+        % https://q.uiver.app/#q=WzAsNCxbMCwwLCJOQSBcXGJ1bGxldCBOQiJdLFswLDEsIk4oQSBcXG90aW1lcyBCKSJdLFsxLDAsIk5CIFxcYnVsbGV0IE5BIl0sWzEsMSwiTihCIFxcb3RpbWVzIEEpIl0sWzAsMiwiXFxzaWdtYV9cXFciXSxbMSwzLCJOKFxcc2lnbWFfXFxWKSIsMl0sWzAsMSwiXFx3aWRldGlsZGUgTl97QSxCfSIsMl0sWzIsMywiXFx3aWRldGlsZGUgTl97QixBfSJdXQ==
+    \begin{tikzcd}[cramped]
+    	{NA \bullet NB} & {NB \bullet NA} \\
+    	{N(A \otimes B)} & {N(B \otimes A)}
+    	\arrow["{\sigma_\W}", from=1-1, to=1-2]
+    	\arrow["{\widetilde N_{A,B}}"', from=1-1, to=2-1]
+    	\arrow["{\widetilde N_{B,A}}", from=1-2, to=2-2]
+    	\arrow["{N(\sigma_\V)}"', from=2-1, to=2-2]
+    \end{tikzcd}
+    \end{equation}
+\end{definition}
+
+\begin{definition}[Monoidal transformation]
+    Given monoidal functors $N,M : (\V, \otimes, I) \to (\W, \bullet, J)$, a \emph{monoidal natural transformation} $\tau: N \Rightarrow M$ is a natural transformation from $N$ to $M$ which preserves comparison:
+    \[
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJOQSBcXGJ1bGxldCBOQiJdLFsxLDAsIk4oQSBcXG90aW1lcyBCKSJdLFswLDEsIk1BIFxcYnVsbGV0IE1CIl0sWzEsMSwiTShBIFxcb3RpbWVzIEIpIl0sWzIsMywiXFx3aWRldGlsZGUgTSIsMl0sWzAsMSwiXFx3aWRldGlsZGUgTiJdLFswLDIsIlxcdGF1X0EgXFxidWxsZXQgXFx0YXVfQiIsMl0sWzEsMywiXFx0YXVfe0EgXFxvdGltZXMgQn0iXV0=
+    \begin{tikzcd}[cramped]
+    	{NA \bullet NB} & {N(A \otimes B)} \\
+    	{MA \bullet MB} & {M(A \otimes B)}
+    	\arrow["{\widetilde N}", from=1-1, to=1-2]
+    	\arrow["{\tau_A \bullet \tau_B}"', from=1-1, to=2-1]
+    	\arrow["{\tau_{A \otimes B}}", from=1-2, to=2-2]
+    	\arrow["{\widetilde M}"', from=2-1, to=2-2]
+    \end{tikzcd}
+    \qquad \qquad \qquad
+    % https://q.uiver.app/#q=WzAsMyxbMCwwLCJKIl0sWzAsMSwiTkkiXSxbMSwxLCJNSSJdLFswLDEsIk5fXFxlcHNpbG9uIiwyXSxbMSwyLCJcXHRhdV9JIiwyXSxbMCwyLCJNX1xcZXBzaWxvbiJdXQ==
+    \begin{tikzcd}[cramped]
+    	J \\
+    	NI & MI
+    	\arrow["{N_\epsilon}"', from=1-1, to=2-1]
+    	\arrow["{M_\epsilon}", from=1-1, to=2-2]
+    	\arrow["{\tau_I}"', from=2-1, to=2-2]
+    \end{tikzcd}
+    \]
+\end{definition}
+
+\begin{example}
+    Just as small categories, functors, and natural transformations assemble into a 2-category $\CCat$, their monoidal counterparts also form a 2-category called $\MMoncat$ [cite some proof].
+\end{example}
+
+\subsection{Enriched categories}
+
+\begin{definition}[$\V$-category]
+    Let $(\V, \otimes, I)$ be a monoidal category. A \emph{$\V$-enriched category} $\C$ consists of
+    \begin{compactitem}
+        \item[(i)] a set of objects $\Ob(\C)$, and for all $A,B,C \in \Ob(\C)$,
+        \item[(ii)] a hom-object $\C(A,B) \in \V$,
+        \item[(iii)] a composition arrow $\then_{A,B,C} :\C(A,B) \otimes \C(B,C) \to \C(A,C),$
+        \item[(iv)] and an identity arrow $\id_A : I \to \C(A,A)$.
+    \end{compactitem}
+    These data are required to make the following associativity and unitality diagrams commute:
+
+    % https://q.uiver.app/#q=WzAsNSxbMCwwLCIoXFxDKEEsQikgXFxvdGltZXMgXFxDKEIsQykpIFxcb3RpbWVzIFxcQyhDLEQpIl0sWzIsMCwiXFxDKEEsQikgXFxvdGltZXMgKFxcQyhCLEMpIFxcb3RpbWVzIFxcQyhDLEQpKSJdLFswLDEsIlxcQyhBLEMpIFxcb3RpbWVzIFxcQyhDLEQpIl0sWzIsMSwiXFxDKEEsQikgXFxvdGltZXMgXFxDKEIsRCkiXSxbMSwxLCJcXEMoQSxEKSJdLFswLDEsIlxcYWxwaGEiXSxbMSwzLCIxIFxcb3RpbWVzIFxcdGhlbiJdLFswLDIsIlxcdGhlbiBcXG90aW1lcyAxIiwyXSxbMiw0LCJcXHRoZW4iXSxbMyw0LCJcXHRoZW4iLDJdXQ==
+    \[\begin{tikzcd}[cramped,column sep=tiny]
+    	{(\C(A,B) \otimes \C(B,C)) \otimes \C(C,D)} && {\C(A,B) \otimes (\C(B,C) \otimes \C(C,D))} \\
+    	{\C(A,C) \otimes \C(C,D)} & {\C(A,D)} & {\C(A,B) \otimes \C(B,D)}
+    	\arrow["\alpha", from=1-1, to=1-3]
+    	\arrow["{\then \otimes 1}"', from=1-1, to=2-1]
+    	\arrow["{1 \otimes \then}", from=1-3, to=2-3]
+    	\arrow["\then", from=2-1, to=2-2]
+    	\arrow["\then"', from=2-3, to=2-2]
+    \end{tikzcd}\]
+
+    % https://q.uiver.app/#q=WzAsNSxbMCwwLCJJIFxcb3RpbWVzIFxcQyhBLEIpIl0sWzAsMSwiXFxDKEEsQSkgXFxvdGltZXMgXFxDKEEsQikiXSxbMSwxLCJcXEMoQSxCKSJdLFsyLDAsIlxcQyhBLEIpIFxcb3RpbWVzIEkiXSxbMiwxLCJcXEMoQSxCKSBcXG90aW1lcyBcXEMoQixCKSJdLFswLDEsIlxcaWRfQSBcXG90aW1lcyAxIiwyXSxbMSwyLCJcXHRoZW4iLDJdLFswLDIsIlxcbGFtYmRhIl0sWzMsNCwiMSBcXG90aW1lcyBcXGlkX0IiXSxbMywyLCJcXHJobyIsMl0sWzQsMiwiXFx0aGVuIl1d
+\[\begin{tikzcd}[cramped]
+	{I \otimes \C(A,B)} && {\C(A,B) \otimes I} \\
+	{\C(A,A) \otimes \C(A,B)} & {\C(A,B)} & {\C(A,B) \otimes \C(B,B)}
+	\arrow["{\id_A \otimes 1}"', from=1-1, to=2-1]
+	\arrow["\lambda", from=1-1, to=2-2]
+	\arrow["\rho"', from=1-3, to=2-2]
+	\arrow["{1 \otimes \id_B}", from=1-3, to=2-3]
+	\arrow["\then"', from=2-1, to=2-2]
+	\arrow["\then", from=2-3, to=2-2]
+\end{tikzcd}\]
+\end{definition}
+
+\begin{example}
+     $\Set$-categories are locally small categories, 
+\end{example}
+
+\begin{example}
+    A $\smcat$-enriched category $\twocat{C}{}$ is a locally small 2-category. For any objects $A,B$, we have a hom-category $\C(A,B)$. We call the objects of $\twocat{C}{}$ \emph{0-cells}, the objects of $\C(A,B)$ \emph{1-cells}, and the arrows of $\C(A,B)$ \emph{2-cells}. There are two directions of composition: Composition in $\C(A,B)$, denoted by $\vertthen$, will be called \emph{vertical}, while the composition functor, denoted $\horthen : \C(A,B) \times \C(B,C) \to \C(A,C)$, will be called \emph{horizontal composition}. For more detail, see \cite[Chapter 2.3]{johnson_2-dimensional_2020}.
+\end{example}
+
+\begin{example}
+    We can view $\DP$ as enriched in $\Pos$: For posets $\F,\R$, the set of feasibility relations $\DP(\F,\R)$ has a natural point-wise ordering. Moreover, since $\wedge$ and $\vee$ are monotone operations, composition of feasibility relations is monotone with respect to this ordering. Associativity and unitality mean the same in $\Pos$ as they do in $\Set$.
+\end{example}
+
+\begin{definition}[$\V$-functor]
+    Let $\C$ and $\D$ be $\V$-categories. A \emph{$\V$-functor} $F: \C \to \D$ consists of a function $F_0 :\Ob(\C) \to \Ob(\D)$, along with $\V$-arrows $F_{A,B} : \C(A,B) \to \D(F_0A,F_0B)$, indexed by $A,B \in \Ob(\C)$. These data must preserve composition and identities:
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJcXEMoQSxCKSBcXG90aW1lcyBcXEMoQixDKSJdLFsyLDAsIlxcRChGQSxGQikgXFxvdGltZXMgXFxEKEZCLEZDKSJdLFswLDEsIlxcQyhBLEMpIl0sWzIsMSwiXFxEKEZBLEZDKSJdLFswLDEsIkZfe0EsQn0gXFxvdGltZXMgRl97QixDfSJdLFsyLDMsIkZfe0EsQ30iXSxbMCwyLCJcXHRoZW4iLDJdLFsxLDMsIlxcdGhlbiJdXQ==
+    \[\begin{tikzcd}[cramped]
+    	{\C(A,B) \otimes \C(B,C)} && {\D(FA,FB) \otimes \D(FB,FC)} \\
+    	{\C(A,C)} && {\D(FA,FC)}
+    	\arrow["{F_{A,B} \otimes F_{B,C}}", from=1-1, to=1-3]
+    	\arrow["\then"', from=1-1, to=2-1]
+    	\arrow["\then", from=1-3, to=2-3]
+    	\arrow["{F_{A,C}}", from=2-1, to=2-3]
+    \end{tikzcd}
+    \qquad \qquad
+    % https://q.uiver.app/#q=WzAsMyxbMCwwLCJJIl0sWzAsMSwiXFxDKEEsQSkiXSxbMSwxLCJcXEQoRkEsRkEpIl0sWzAsMSwiXFxpZF9BIiwyXSxbMSwyLCJGX3tBLEF9Il0sWzAsMiwiXFxpZF97RkF9Il1d
+    \begin{tikzcd}[cramped]
+    	I \\
+    	{\C(A,A)} & {\D(FA,FA)}
+    	\arrow["{\id_A}"', from=1-1, to=2-1]
+    	\arrow["{\id_{FA}}", from=1-1, to=2-2]
+    	\arrow["{F_{A,A}}", from=2-1, to=2-2]
+    \end{tikzcd}\]
+    As above, we drop subscripts on $F$ if they are clear from context.
+\end{definition}
+
+\begin{definition}[Composition of $\V$-functors]
+    Given $\V$-functors $F : \C \to \D$ and $G: \D \to \E$, we define their \emph{composite} $F \then G$ on objects as $(F \then G)_0 := F_0 \then G_0$, and on arrows as $(G \then G)_{A,B} := F_{A,B} \then G_{FA,FB}$. For any $\V$-category $\C$, the \emph{identity} $\V$-functor $\Id_{\C}$ is defined by $\Id_0 := \id_{\Ob(\C)}$ and $\Id_{A,B} := \id_{\C(A,B)}$.
+\end{definition}
+
+\begin{example}
+    $\Set$-functors are ordinary functors.
+\end{example}
+
+\begin{example}
+    $\Pos$-enriched functors are ordinary functors whose on-arrow maps are monotone. Hence, when we view $\DP$ as being $\Pos$ enriched, we should only consider incoming and outgoing functors that are monotone on arrows.
+\end{example}
+
+\begin{example}
+    $\smcat$-functors are 2-functors. Explicitly, a 2-functor $F: \twocat{C}{} \to \twocat{D}{}$ maps 0-cells with $F_0$, and 1- and 2-cells with functors $F_{A,B}: \twocat{C}{}(A,B) \to \twocat{D}{}(FA,FB)$ in a way that strictly preserves horizontal composition and identities. Hence, $F$ preserves both vertical and horizontal compositional structures.
+\end{example}
+
+
+
+\begin{definition}[$\V$-natural transformation]
+    Let $F,G : \C \to \D$ be $\V$-functors. A \emph{$\V$-natural transformation} $\tau: F \Rightarrow G$ is a family of $\V$-arrows $\sigma_A: I \to \D(FA,GA)$, indexed by $A \in \Ob(\C)$, that satisfy the following $\V$-naturality conditions:
+    \[
+    % https://q.uiver.app/#q=WzAsNixbMCwxLCJcXEMoQSxCKSJdLFsxLDAsIkkgXFxvdGltZXMgXFxDKEEsQikiXSxbMywwLCJcXEQoRkEsR0EpIFxcb3RpbWVzIFxcRChHQSxHQikiXSxbNCwxLCJcXEQoRkEsR0IpIl0sWzEsMiwiXFxDKEEsQikgXFxvdGltZXMgSSJdLFszLDIsIlxcRChGQSxGQikgXFxvdGltZXMgXFxEKEZCLEdCKSJdLFsyLDMsIlxcdGhlbiJdLFsxLDIsIlxcdGF1X0EgXFxvdGltZXMgRyJdLFswLDEsIlxcbGFtYmRhXnstMX0iXSxbMCw0LCJcXHJob157LTF9IiwyXSxbNCw1LCJGIFxcb3RpbWVzIFxcdGF1X0IiXSxbNSwzLCJcXHRoZW4iLDJdXQ==
+    \begin{tikzcd}[cramped, row sep = tiny]
+    	& {I \otimes \C(A,B)} && {\D(FA,GA) \otimes \D(GA,GB)} \\
+    	{\C(A,B)} &&&& {\D(FA,GB)} \\
+    	& {\C(A,B) \otimes I} && {\D(FA,FB) \otimes \D(FB,GB)}
+    	\arrow["{\tau_A \otimes G}", from=1-2, to=1-4]
+    	\arrow["\then", from=1-4, to=2-5]
+    	\arrow["{\lambda^{-1}}", from=2-1, to=1-2]
+    	\arrow["{\rho^{-1}}"', from=2-1, to=3-2]
+    	\arrow["{F \otimes \tau_B}", from=3-2, to=3-4]
+    	\arrow["\then"', from=3-4, to=2-5]
+    \end{tikzcd}
+    \]
+\end{definition}
+
+\begin{example}
+    A $\smcat$-natural transformation $\tau: F \Rightarrow G$ between 2-functors is a 2-natural transformation. It consists of 1-cells $\tau_A: FA \to GA$ satisfying $\tau_A \horthen G\beta = F\beta \horthen \tau_B$, for every 2-cell $(\beta: f \Rightarrow g) \in \C(A,B)$.
+\end{example}
+
+There are two ways to compose $\V$-natural transformations, vertical and horizontal:
+
+\[
+\qquad
+% https://q.uiver.app/#q=WzAsMixbMCwwLCJcXEMiXSxbMiwwLCJcXEQiXSxbMCwxLCJGIiwwLHsiY3VydmUiOi0zfV0sWzAsMSwiSCIsMix7ImN1cnZlIjozfV0sWzAsMSwiRyIsMV0sWzIsNCwiXFx0YXUiLDAseyJzaG9ydGVuIjp7InNvdXJjZSI6MzAsInRhcmdldCI6MzB9fV0sWzQsMywiXFx0aGV0YSIsMCx7InNob3J0ZW4iOnsic291cmNlIjozMCwidGFyZ2V0IjozMH19XV0=
+\begin{tikzcd}[cramped]
+	\C && \D
+	\arrow[""{name=0, anchor=center, inner sep=0}, "F", curve={height=-18pt}, from=1-1, to=1-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "H"', curve={height=18pt}, from=1-1, to=1-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "G"{description}, from=1-1, to=1-3]
+	\arrow["\tau", shorten <=4pt, shorten >=4pt, Rightarrow, from=0, to=2]
+	\arrow["\theta", shorten <=4pt, shorten >=4pt, Rightarrow, from=2, to=1]
+\end{tikzcd}
+\qquad \qquad \qquad \qquad
+% https://q.uiver.app/#q=WzAsMyxbMCwwLCJcXEMiXSxbMiwwLCJcXEQiXSxbNCwwLCJcXEUiXSxbMCwxLCJGXzEiLDEseyJjdXJ2ZSI6LTN9XSxbMCwxLCJHXzEiLDEseyJjdXJ2ZSI6M31dLFsxLDIsIkZfMiIsMSx7ImN1cnZlIjotM31dLFsxLDIsIkdfMiIsMSx7ImN1cnZlIjozfV0sWzMsNCwiXFx0YXVfMSIsMCx7InNob3J0ZW4iOnsic291cmNlIjoyMCwidGFyZ2V0IjoyMH19XSxbNSw2LCJcXHRhdV8yIiwwLHsic2hvcnRlbiI6eyJzb3VyY2UiOjIwLCJ0YXJnZXQiOjIwfX1dXQ==
+\begin{tikzcd}[cramped]
+	\C && \D && \E
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{F_1}"{description}, curve={height=-18pt}, from=1-1, to=1-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{G_1}"{description}, curve={height=18pt}, from=1-1, to=1-3]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{F_2}"{description}, curve={height=-18pt}, from=1-3, to=1-5]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{G_2}"{description}, curve={height=18pt}, from=1-3, to=1-5]
+	\arrow["{\tau_1}", shorten <=5pt, shorten >=5pt, Rightarrow, from=0, to=1]
+	\arrow["{\tau_2}", shorten <=5pt, shorten >=5pt, Rightarrow, from=2, to=3]
+\end{tikzcd}
+\]
+
+\begin{definition}[Vertical composition of $\V$-natural transformations]
+    Given $\V$-functors $F,G,H: \C \to \D$ and $\V$-natural transformations $\tau: F \Rightarrow G$ and $\theta: G \Rightarrow H$, we define their \emph{vertical composite} $\tau \vertthen \theta : F \Rightarrow H$ to have components  $(\tau \vertthen \theta)_A$  given by the composite
+    \[
+        I \cong I \otimes I \overset{\tau_A \otimes \theta_A}{\longrightarrow} \D(FA,GA) \otimes \D(GA,HA) \overset{\then}{\longrightarrow} \D(FA,HA)
+    \]
+\end{definition}
+
+\begin{definition}[Horizontal composition of $\V$-natural transformations]
+    Given $\V$-functors $F_1,G_1 : \C \to \D$ and $F_2, G_2: \D \to \E$, along with $\V$-natural transformations $\tau_1: F_1 \Rightarrow G_1$ and $\tau_2: F_2 \Rightarrow G_2$, we define their \emph{horizontal composite} $\tau_1 \horthen \tau_2: F_1 \then F_2 \Rightarrow G_1 \then G_2$ to have components $(\tau_1 \horthen \tau_2)_A$ given by either one of the composites in the following commutative diagram:
+    \[
+    % https://q.uiver.app/#q=WzAsNyxbMiwyLCJcXEQoRl8xQSxHXzFBKSBcXG90aW1lcyBJIl0sWzQsMiwiXFxFKCBGXzJGXzFBLCBGXzJHXzFBKSBcXG90aW1lcyBcXEUoRl8yR18xQSwgR18yR18xQSkiXSxbNCwxLCJcXEUoRl8yRl8xQSxHXzJHXzFBKS4iXSxbMiwwLCJJIFxcb3RpbWVzIFxcRChGXzEgQSwgR18xIEEpIl0sWzQsMCwiXFxFKEZfMiBGXzEgQSAsIEdfMiBGXzEgQSkgXFxvdGltZXMgXFxFKEdfMkZfMUEsR18yR18xQSkiXSxbMCwxLCJJIl0sWzEsMSwiXFxEKEZfMSBBLCBHXzFBKSJdLFswLDEsIkZfMiBcXG90aW1lcyBcXHRhdV97MkdfMUF9Il0sWzEsMiwiXFx0aGVuIiwyXSxbMyw0LCJcXHRhdV97MiBGXzEgQX0gXFxvdGltZXMgR18yIl0sWzQsMiwiXFx0aGVuIl0sWzUsNiwiXFx0YXVfezFBfSJdLFs2LDAsIlxccmhvXnstMX0iLDJdLFs2LDMsIlxcbGFtYmRhXnstMX0iXV0=
+    \begin{tikzcd}[cramped, row sep = scriptsize]
+    	&& {I \otimes \D(F_1 A, G_1 A)} && {\E(F_2 F_1 A , G_2 F_1 A) \otimes \E(G_2F_1A,G_2G_1A)} \\
+    	I & {\D(F_1 A, G_1A)} &&& {\E(F_2F_1A,G_2G_1A).} \\
+    	&& {\D(F_1A,G_1A) \otimes I} && {\E( F_2F_1A, F_2G_1A) \otimes \E(F_2G_1A, G_2G_1A)}
+    	\arrow["{\tau_{2 F_1 A} \otimes G_2}", from=1-3, to=1-5]
+    	\arrow["\then", from=1-5, to=2-5]
+    	\arrow["{\tau_{1A}}", from=2-1, to=2-2]
+    	\arrow["{\lambda^{-1}}", from=2-2, to=1-3]
+    	\arrow["{\rho^{-1}}"', from=2-2, to=3-3]
+    	\arrow["{F_2 \otimes \tau_{2G_1A}}", from=3-3, to=3-5]
+    	\arrow["\then"', from=3-5, to=2-5]
+    \end{tikzcd}
+    \]
+\end{definition}
+
+
+One can show that $\V$-categories, $\V$-functors, and $\V$-natural transformations assemble into a strict 2-category $\VCat$ (for a proof see \cite[Thm.~10.2]{eilenberg_closed_1966}).
+
+\begin{definition}[Category underlying a $\V$-category]
+    We write $(-)_0 : \VCat \to \CCat$ for the representable 2-functor $\VCat(1,-)$, where $1$ is the unit $\V$-category. This 2-functor sends a $\V$-category $\C$ to the ordinary category $\C_0$ whose objects are those of $\C$, and whose arrows $f: A \to B$ are $\V$-arrows of the form $f: I \to \C(A,B)$. Composition is defined by
+    \[ I \cong I \otimes I \overset{f \otimes g}{\longrightarrow} \C(A,B) \otimes \C(B,C) \overset{\then}{\longrightarrow} \C(A,C). \]
+    Moreover, a $\V$-functor $F: \C \to \D$ is mapped the the functor $F_0: \C_0 \to \D_0$ that sends $A \mapsto FA$ and $f: I \to \C(A,B)$ to $Ff: I \to \C(A,B) \overset{F_{A,B}}{\longrightarrow} \D(FA,FB)$. Finally, a $\V$-natural transformation $\tau: F \Rightarrow G$ with components $\tau_A : I \to \D(FA,GA)$ is sent to the natural transformation $\tau_0 : F_0 \Rightarrow G_0$ with components $\tau_{0A} := \tau_A$.
+\end{definition}
+
+Suppose from now on that $\V$ is symmetric monoidal.
+\begin{definition}[Monoidal product of $\V$-categories.]
+    Given $\V$-categories $\C$ and $\D$, we define their \emph{monoidal product} $\C \otimes \D$ to have objects $\Ob(\C \otimes \D) := \Ob(\C) \times \Ob(\D)$ and arrows $(\C \otimes \D)[(A_1,A_2),(B_1,B_2)] := \C(A_1,B_1) \otimes \D(A_2,B_2)$.  
+    The composition and identity arrows for $\C \otimes \D$ are given by
+    \[
+    % https://q.uiver.app/#q=WzAsMyxbMCwwLCJbXFxDKEFfMSxCXzEpIFxcb3RpbWVzIFxcRChBXzIsIEJfMildIFxcb3RpbWVzIFtcXEMoQl8xLENfMSkgXFxvdGltZXMgXFxEKEJfMiwgQ18yKV0iXSxbMCwxLCJbXFxDKEFfMSxCXzEpIFxcb3RpbWVzIFxcQyhCXzEsIENfMSldIFxcb3RpbWVzIFtcXEQoQV8yLEJfMikgXFxvdGltZXMgXFxEKEJfMiwgQ18yKV0iXSxbMSwxLCJcXEMoQV8xLENfMSkgXFxvdGltZXMgXFxEKEFfMixDXzIpIl0sWzAsMSwibSIsMl0sWzAsMiwiXFx0aGVuX3tcXEMgXFxvdGltZXMgXFxEfSIsMCx7InN0eWxlIjp7ImJvZHkiOnsibmFtZSI6ImRhc2hlZCJ9fX1dLFsxLDIsIlxcdGhlbl9cXEMgXFxvdGltZXMgXFx0aGVuX1xcRCIsMl1d
+    \begin{tikzcd}[cramped, sep = scriptsize]
+    	{[\C(A_1,B_1) \otimes \D(A_2, B_2)] \otimes [\C(B_1,C_1) \otimes \D(B_2, C_2)]} \\
+    	{[\C(A_1,B_1) \otimes \C(B_1, C_1)] \otimes [\D(A_2,B_2) \otimes \D(B_2, C_2)]} & {\C(A_1,C_1) \otimes \D(A_2,C_2)}
+    	\arrow["m"', from=1-1, to=2-1]
+    	\arrow["{\then_{\C \otimes \D}}", dashed, from=1-1, to=2-2]
+    	\arrow["{\then_\C \otimes \then_\D}"', from=2-1, to=2-2]
+    \end{tikzcd}
+    \qquad
+    % https://q.uiver.app/#q=WzAsMixbMCwwLCJJIFxcY29uZyBJIFxcb3RpbWVzIEkgIl0sWzAsMSwiXFxDKEEsQSkgXFxvdGltZXMgXFxEKEIsQikiXSxbMCwxLCJcXGlkX0EgXFxvdGltZXMgXFxpZF9CIiwyXV0=
+    \begin{tikzcd}[cramped, sep = scriptsize]
+    	{I \cong I \otimes I } \\
+    	{\C(A,A) \otimes \D(B,B)}
+    	\arrow["{\id_A \otimes \id_B}"', from=1-1, to=2-1]
+    \end{tikzcd}
+    \]
+    where $m$ denotes the unique coherence isomorphism composed of $\alpha$ and $\sigma$. This product has a unit given by the $\V$-category $1$ with a single object $*$ and arrows $1(*,*) := I$.
+\end{definition}
+
+\begin{definition}[Monoidal $\V$-category]
+    A \emph{monoidal $\V$-category} $(\C, \boxtimes, J)$ consists of a $\V$-category $\C$, a $\V$-functor $\boxtimes: \C \otimes \C \to \C$, a unit object $J \in \Ob(\C)$, and $\V$-natural isomorphisms with components
+    \[ 
+        a_{A,B,C}: I \to \C((A \boxtimes B) \boxtimes C, A \boxtimes (B \boxtimes C)), \qquad 
+        r_A: I \to \C(A \boxtimes J, A), \qquad
+        l_A: I \to \C(J \boxtimes A, A),
+    \]
+    that make $(\C_0, \boxtimes_0, J)$ into a monoidal category. Furthermore, we say that $(\C, \boxtimes, J)$ is \emph{symmetric}, if it comes equipped with a $\V$-natural isomorphism whose components $s_{A,B} : I \to \C(A \boxtimes B, B \boxtimes A)$ make  $(\C_0, \boxtimes_0, J)$ symmetric monoidal.
+\end{definition}
+
+[The above is not quite right since $\boxtimes_0: (\C \otimes \C)_0 \to \C_0$. Need to precompose with $\C_0 \times \C_0 \to (\C \otimes \C)_0$.]
+
+\begin{example}
+    A (symmetric) monoidal $\Set$-category $\C$ may be identified with an ordinary (symmetric) monoidal category using the isomorphism $\Set(\{ * \}, \C(A,B)) \cong \C(A,B)$.
+\end{example}
+
+\begin{example}
+    A (symmetric )monoidal $\Pos$-category $\C$ can be thought of as an ordinary (symmetric) monoidal category $\C_0$ whose hom-sets are partially ordered, and where composition, the monoidal product, and coherence isomorphisms are monotone maps.
+\end{example}
+
+\begin{example}
+    The monoidal product in $\DP$ is monotone (since $\wedge$ is). So are the coherence isomorphisms that $\DP$ inherits from $\Pos$. Hence, we may view $\DP$ as a symmetric monoidal $\Pos$-category.
+\end{example}
+
+\begin{example}
+    A monoidal $\smcat$-category can be viewed as a 2-category $\CC$, together with a 2-functor $\boxtimes: \CC \times \CC \to \CC$, a unit object $J \in \Ob(\CC)$, invertible functors $a_{A,B,C} : (A \boxtimes C) \boxtimes D \cong  A \boxtimes (C \boxtimes D)$, $r_A: A \boxtimes J \cong A$, $l_A: J \boxtimes A \cong A$ that are natural in $A,B,C$, and satisfy the pentagon and triangle identities. It is a particularly strict instance of a monoidal 2-category, as defined in \cite{ahmadi_monoidal_2023}. A symmetric structure on $\CC$ consists of functors $s_{A,B}: A \boxtimes B \to B \boxtimes A$ that are natural in $A,B$, satisfy $s_{A,B} \then s_{B,A} = \id$ and the coherence diagrams of a symmetric monoidal category.
+\end{example}
+
+\subsection{Change of base}
+
+\begin{proposition}[Change of base]
+    Any lax monoidal functor $N: \V \to \W$ induces a 2-functor $N_* : \VCat \to \WCat$, given by change of base along $N$. Explicitly, $N_*$ is defined as follows:
+    \begin{compactitem}
+        \item[(i)] A $\V$-category $\C$ maps to the $\W$-category $F_*\C$ with objects $\Ob(N_*\C) := \Ob(\C)$, hom-objects $(N_*\C)(A,B) := N\C(A,B)$, with composition and identities defined by
+        \begin{align*}
+            \then_{N_*\C} &:= N\C(A,B) \otimes_W N\C(B,C) \overset{\widetilde N}{\longrightarrow} N( \C(A,B) \otimes_\V \C(B,C) ) \overset{N\then_\C}{\longrightarrow} N\C(A,C), \\
+            \id_{*A} &:= I_\W \overset{N_\epsilon}{\longrightarrow} NI_\V \overset{N\id_A}{\longrightarrow} N\C(A,A).
+        \end{align*}        
+    \item[(ii)] A $\V$-functor $F: \C \to \D$ maps to the $\W$-functor $N_*F$ which acts on objects by $(N_*F)_0 := F_0$ and on arrows by $(N_*F)_{A,B} := NF_{A,B}$.
+    \item[(iii)] A $\V$-natural transformation $\tau: F \Rightarrow G$ maps to the $\W$-natural transformation with components $(N_* \tau)_A := I_\W \overset{N_\epsilon}{\longrightarrow} NI_\V \overset{N\tau_A}{\longrightarrow} N\D(FA,GA)$.
+    \end{compactitem}
+\end{proposition}
+\begin{proof}
+    \cite[Props.~4.2.1-3, Thm.~4.2.4]{cruttwell_normed_2008}.
+\end{proof}
+
+\begin{proposition}
+    If $N: \V \to \W$ is a braided monoidal functor, and $\C$ is a monoidal $\V$-category, then $N_*\C$ has the structure of a monoidal $\W$-category with the same unit object $J \in \Ob(\C) = \Ob(N_*\C)$, monoidal product given by 
+    \[ N_*\C \otimes N_*\C \overset{(\widetilde N)_*}{\longrightarrow} N_*(\C \otimes \C)  \overset{N_*\boxtimes}{\longrightarrow} N_*\C, \]
+    where $(\widetilde N)_*$ is the identity-on-objects $\W$-functor that maps arrows according to $\widetilde N$:
+    \[ 
+        N\C(A_1,B_1) \otimes N\C(A_2,B_2) \overset{\widetilde N}{\longrightarrow} N(\C(A_1,B_1) \otimes \C(A_2,B_2)) = N(\C \otimes \C)[(A_1,A_1),(B_1,B_2)],
+    \]
+    and coherence isomorphisms $N_*a$, $N_*r$, and $N_*l$.
+\end{proposition}
+\begin{proof}
+    \cite[Prop.~5.4.2]{cruttwell_normed_2008} defines $(\widetilde N)_*$, \cite[Thm.~5.7.1]{cruttwell_normed_2008} proves the proposition.
+\end{proof}
+
+[Also transfer symmetry.]
+
+\begin{proposition}
+    The change of base construction induces a 2-functor  $(-)_* : \MMoncat \to \TTwocat$. It sends a monoidal category $\V$ to the 2-category $\VCat$, a monoidal functor $N: \V \to \W$ to the 2-functor $N_* : \VCat \to \WCat$, and a monoidal transformation $\sigma: N \Rightarrow M$ to the 2-natural transformation $\sigma_* : N_* \Rightarrow M_*$ whose component $\sigma_{*\C} : N_*\C \to M_*\C$ is the $\W$-functor with $(\sigma_{*\C})_0 = \id_{\Ob(\C)}$ and $(\sigma_{*\C})_{A,B} := \sigma_{\C(A,B)}$.
+\end{proposition}
+
+\begin{proof}
+    \cite[Prop.~4.3.1, Thm.~4.3.2]{cruttwell_normed_2008}.
+\end{proof}
+
+
+\section{Uncertainty with External Parameterization}\label{sec:parametric-uncertainty}
+This section introduces parametric uncertainty, using the change of base technique introduced in \cref{sec:background}.
+We adopt Markov categories as the categorical language for uncertainty, and the final objective would be: taking an arbitrary category $\C$ enriched in monoidal category $\V$, we construct a 2-category $\C_\WsliceCat$ as a monoidal Cat-enriched category.
+The category $\W$ is a Markov category with the required uncertainty semantics, and the slice functor represents external parameterization as morphisms in $\W$.
+% During this section, we take the category of design problems $\DP$ as an example, adding different uncertainty quantifications to it.
+
+In principle, one can construct $\C$ as enriched in $\W$, but in most cases $\C$ not directly given in this form, but enriched in the deterministic subcategory $\W\detSubCat$, or even another category.
+We will show that: by viewing the Markov category $\W$ as a Kleisli category $\Kl_\monadM$ of an uncertainty monad $\monadM$ on $\V$, we can construct $\C_\WsliceCat$ without any extra effort.
+We will start by discussing uncertainty monad and how we can use change of base to move from $\V$ enriched categories to $\Kl_\monadM$ enriched categories, and then we show how to add the external parameterization with the slice functor from $\Kl_\monadM$ to $\CCat$.
+
+The slice functor can also form a change of base from a general monoidal category $\W$ to $\CCat$, not necessarily the Kleisli category of an uncertainty monad.
+This allows for external parameterization of any category enriched in $\W$.
+We will also show that when $\C$ is closed monoidal, this change of base along slice functor is isomorphic to $\Para$ construction in \cite{fongBackpropFunctorCompositional2019}.
+In addition to the uncertainty with external parameterization, we also discuss how to construct uncertainty without external parameterization using the monad $\monadM$, and this generalizes many uncertainty quantifications such as the interval method in \cite{censi_uncertainty_2017}.
+
+\subsection{Uncertainty Monads}\label{subsec:uncertainty-monads}
+[We assume defs of Kleisli and Markov cateogories. Could be added here or put in Appendix.]
+
+Here we introduce uncertainty monads whose Kleisli categories are Markov categories.
+For the discussion in \cref{subsec:slice-functor}, we also state the strictfication theorem for Markov categories.
+
+Most uncertainty models can be viewed as additional structures on the deterministic objects.
+For instance, one can consider ``bounded intervals of variables'' or ``subsets of variables'' as robust quantifications of uncertainty.
+This idea is formalized as \emph{symmetric monoidal monads} \cite{fritz_synthetic_2020, fritz_representable_2023}.
+
+\begin{definition}[Symmetric monoidal monad]
+    Let $\V$ be a symmetric monoidal category. A monad $\monadTup$ on $\V$ with multiplication $\monadMul$ and unit $\monadUnit$
+    is called \emph{symmetric monoidal} if it comes equipped with morphisms
+    $$
+    \symMonadMorOf{X}{Y}: \monadM(X) \otimes \monadM(Y) \to \monadM(X \otimes Y)
+    $$
+   that are natural in $X$ and $Y$, make $\monadM$ into a symmetric monoidal functor with unit $\monadUnit_I$, and make $\monadMul$ and $\monadUnit$ into monoidal transformations:
+    \[
+   % https://q.uiver.app/#q=WzAsNSxbMCwwLCJcXG1vbmFkTSBcXG1vbmFkTSBYIFxcb3RpbWVzIFxcbW9uYWRNIFxcbW9uYWRNIFkiXSxbMSwwLCJcXG1vbmFkTShcXG1vbmFkTSBYIFxcb3RpbWVzIFxcbW9uYWRNIFkpIl0sWzIsMCwiXFxtb25hZE0gXFxtb25hZE0gKFggXFxvdGltZXMgWSkiXSxbMCwxLCJcXG1vbmFkTSBYIFxcb3RpbWVzIFxcbW9uYWRNIFkiXSxbMiwxLCJcXG1vbmFkTSAoWCBcXG90aW1lcyBZKSJdLFswLDMsIlxcbW9uYWRNdWwgXFxvdGltZXMgXFxtb25hZE11bCIsMl0sWzMsNCwiXFxzeW1Nb25hZE1vciIsMl0sWzIsNCwiXFxtb25hZE11bCJdLFswLDEsIlxcc3ltTW9uYWRNb3IiXSxbMSwyLCJcXG1vbmFkTSBcXHN5bU1vbmFkTW9yIl1d
+    \begin{tikzcd}[cramped, sep = scriptsize]
+    	{\monadM \monadM X \otimes \monadM \monadM Y} & {\monadM(\monadM X \otimes \monadM Y)} & {\monadM \monadM (X \otimes Y)} \\
+    	{\monadM X \otimes \monadM Y} && {\monadM (X \otimes Y)}
+    	\arrow["\symMonadMor", from=1-1, to=1-2]
+    	\arrow["{\monadMul \otimes \monadMul}"', from=1-1, to=2-1]
+    	\arrow["{\monadM \symMonadMor}", from=1-2, to=1-3]
+    	\arrow["\monadMul", from=1-3, to=2-3]
+    	\arrow["\symMonadMor"', from=2-1, to=2-3]
+    \end{tikzcd}
+    \qquad \qquad    
+    % https://q.uiver.app/#q=WzAsMyxbMiwwLCJYIFxcb3RpbWVzIFkiXSxbMCwxLCJcXG1vbmFkTSBYIFxcb3RpbWVzIFxcbW9uYWRNIFkiXSxbMiwxLCJcXG1vbmFkTSAoWCBcXG90aW1lcyBZKSJdLFswLDEsIlxcbW9uYWRVbml0IFxcb3RpbWVzIFxcbW9uYWRVbml0IiwyXSxbMCwyLCJcXG1vbmFkVW5pdCJdLFsxLDIsIlxcc3ltTW9uYWRNb3IiLDJdXQ==
+    \begin{tikzcd}[cramped]
+    	&& {X \otimes Y} \\
+    	{\monadM X \otimes \monadM Y} && {\monadM (X \otimes Y)}
+    	\arrow["{\monadUnit \otimes \monadUnit}"', from=1-3, to=2-1]
+    	\arrow["\monadUnit", from=1-3, to=2-3]
+    	\arrow["\symMonadMor"', from=2-1, to=2-3]
+    \end{tikzcd}
+\]
+    Moreover, if $I$ is terminal in $\V$ and $\monadM I \cong I$, we call $\monadM$ \emph{affine}.
+\end{definition}
+
+\begin{proposition}\label{prop:monad-markov-category}
+    Given a symmetric monoidal monad $\monadTup$ on $\V$, its Kleisli category $\Kl_\monadM$ is symmetric monoidal under the monoidal product that sends $f: A \to \monadM X$ and $g: B \to \monadM Y$ to 
+    \[
+    A \otimes B \overset{f \otimes g}{\longrightarrow} \monadM X \otimes \monadM Y \overset{\symMonadMor}{\longrightarrow} \monadM(X \otimes Y).
+    \]
+    Moreover, the inclusion functor $\leftFunctor_\monadM: \V \to \Kl_\monadM$ is strict symmetric monoidal. Furthermore, if $\V$ is a Markov category and $\monadM$ affine, then $\Kl_\monadM$ becomes a Markov category with copy and delete maps given by $\leftFunctor_\monadM(\copyMor_X)$ and $\leftFunctor_\monadM(\delMor_X)$.
+\end{proposition}
+\begin{proof}
+    \cite[Prop.~3.1, Cor.~3.2]{fritz_synthetic_2020}
+\end{proof}
+
+Since most categories with deterministic meanings, for instance category of sets and functions, are Markov categories, so \cref{prop:monad-markov-category} provides a convenient way to construct Markov category with uncertainty meaning.
+The additional statement is important, since we rely on monoidal functors to perform the change of base.
+
+\begin{example}
+    In the category of sets and functions $\Set$, the nonempty powerset functor $\PowNoEmpty$ with proper unit and multiplication forms an affine symmetric monoidal monad.
+\end{example}
+\begin{proof}
+    As a natural extension of \cite[3.3. Example.]{fritz_synthetic_2020} from finite sets to any sets.
+\end{proof}
+
+\begin{example}
+    In the category of measurable spaces and measurable maps $\Meas$, the probability measure functor $\Prob$, which on objects maps a measurable space $(X, \SigAlg_X)$ to the space of probability measures on it equipped with another proper sigma algebra, forms an affine symmetric monoidal monad \cite[4. Example.]{fritz_synthetic_2020}.
+\end{example}
+
+\begin{example}
+    In the category of partial-ordered sets (posets) and monotone functions $\Pos$, the arrow functor $\Arr$ mapping each poset to the set of intervals with the following order accompanied natural transformations, forms an affine symmetric monad.
+    \begin{itemize}[nosep, label=$\vartriangleright$]
+        \item Order of intervals $\interval{a}{b}$ is defined as: $\interval{a}{b} \posetleq \interval{c}{d} \iff a \posetleq c \wedge b \posetleq d$.
+        \item Unit morphisms: $\monadUnit_\posetP: \posetP \to \Arr \posetP,\, a \elementTo \interval{a}{a}$.
+        \item Multiplication morphisms: $\monadMul_\posetP: \Arr \Arr \posetP \to \Arr \posetP,\, \interval{\interval{a}{b}}{\interval{c}{d}} \elementTo \interval{a}{d}$.
+        \item Symmetric monoidal morphisms: $\symMonadMorOf{\posetP}{\posetQ}: \Arr \posetP \otimes \Arr \posetQ \to \Arr (\posetP \otimes \posetQ),\, \interval{a}{b} \otimes \interval{c}{d} \elementTo \interval{a \otimes c}{b \otimes d}$.
+    \end{itemize}
+\end{example}
+\begin{proof}
+    TODO: everything checked, just need to type down the proof.
+\end{proof}
+
+\begin{counterexample}
+    In some cases, it's of interest to consider the twisted arrow functor $\TwiArr$ on $\Pos$ as an uncertainty construction, where the intervals are ordered: $\interval{a}{b} \posetleq \interval{c}{d} \iff c \posetleq a \wedge b \posetleq d$ \cite{censi_uncertainty_2017}.
+    Although $\TwiArr$ is a valid functor, it's not accompanied by proper natural transformations $\monadMul$ and $\monadUnit$ to form a monad.
+\end{counterexample}
+
+We should note that, although we mainly discuss the change of base along the standard inclusion functor, which is essential for the external parameterized uncertainty, one can also perform change of base along the uncertainty monad $\monadM$ to construct a category of unparameterized uncertainty.
+
+We still need to provide the strictification theorem for Markov categories \cite{fritz_synthetic_2020}.
+This is essential for the Slice functor discussed later in \cref{subsec:slice-functor}.
+\begin{proposition}\label{prop:strict-markov}
+    Every Markov category $\V$ is comonoid equivalent to a Markov category $\Vs$ whose underlying monoidal category is strict. This means that there exist an equivalence of categories $\functorF: \V \to \Vs$ that is a symmetric monoidal functor, and for every $Y \in \Vs$, there is $X \in \V$ with an isomorphism $i : Y \overset{\sim}{\to} \functorF X$ that preserves copying:
+    \[
+    % https://q.uiver.app/#q=WzAsNCxbMCwwLCJZIl0sWzEsMCwiXFxmdW5jdG9yRiBYIl0sWzAsMSwiWSBcXG90aW1lcyBZIl0sWzEsMSwiXFxmdW5jdG9yRiBYIFxcb3RpbWVzIFxcZnVuY3RvckYgWCJdLFsyLDMsImkgXFxvdGltZXMgcyIsMl0sWzAsMiwiXFxjb3B5TW9yX1kiLDJdLFsxLDMsIlxcY29weU1vcl97XFxmdW5jdG9yRiBYfSJdLFswLDEsImkiXV0=
+    \begin{tikzcd}[cramped, row sep = scriptsize]
+    	Y & {\functorF X} \\
+    	{Y \otimes Y} & {\functorF X \otimes \functorF X}
+    	\arrow["i", from=1-1, to=1-2]
+    	\arrow["{\copyMor_Y}"', from=1-1, to=2-1]
+    	\arrow["{\copyMor_{\functorF X}}", from=1-2, to=2-2]
+    	\arrow["{i \otimes s}"', from=2-1, to=2-2]
+    \end{tikzcd}
+    \]
+\end{proposition}
+\begin{proof}
+    \cite[Prop.~10.16, Thm.~10.17]{fritz_synthetic_2020}
+\end{proof}
+
+[This is the old version:]
+\begin{proposition}
+    Every Markov category $\C$ is equivalent to a strict one $\Cs$, in a sense that there exist an isomorphic strong monoidal functor $\functorF$ that preserves the following diagram for each object $X$ in $\C$:
+    % https://q.uiver.app/#q=WzAsMyxbMSwwLCJcXGZ1bmN0b3JGIFgiXSxbMCwxLCJcXGZ1bmN0b3JGIFggXFxvdGltZXMgXFxmdW5jdG9yRiBYIl0sWzIsMSwiXFxmdW5jdG9yRihYIFxcb3RpbWVzIFgpIl0sWzAsMSwiXFxjb3B5TW9yX3tcXGZ1bmN0b3JGIFh9IiwyXSxbMSwyLCJcXGNvbmciXSxbMCwyLCJcXGZ1bmN0b3JGKFxcY29weU1vcl9YKSJdXQ==
+    \[\begin{tikzcd}
+	& {\functorF X} \\
+	{\functorF X \otimes \functorF X} && {\functorF(X \otimes X)}
+	\arrow["{\copyMor_{\functorF X}}"', from=1-2, to=2-1]
+	\arrow["{\functorF(\copyMor_X)}", from=1-2, to=2-3]
+	\arrow["\cong", from=2-1, to=2-3]
+    \end{tikzcd}\]
+    where the horizontal arrow is the relevant structure morphism of monoidal functor $\functorF$.
+\end{proposition}
+
+\Cref{prop:strict-markov} allows us to only consider Markov categories with strict monoidal structures without loss of generality, which is essential in making the Slice functor $\sliceFunctor$ lax monoidal.
+In non-strict Markov categories, we have to deal with weak lax monoidal functors, giving us bi-categories with much more complicated monoidal structures than 2-categories as in \cref{sec:background}.
+
+\begin{lemma}
+    The forgetful functor $U: \Pos \to \Set$ is strict symmetric monoidal.
+\end{lemma}
+
+\begin{lemma}
+    There is a symmetric monoidal functor $\Sigma: \Pos \to \Meas$ that maps each poset $(\posetP, \posetleq)$ to the measurable space $(\posetP, \Sigma_\posetP)$ where $\Sigma_\posetP$ is the $\sigma$-algebra generated by the upper sets of $\posetP$. 
+\end{lemma}
+\begin{proof}
+    We obtain $\Sigma$ as a composite $\Pos \overset{\msf{A}}{\longrightarrow} \Top \overset{\msf{B}}{\longrightarrow} \Meas$, where $\msf{A}$ maps each poset to the topological space generated by its upper sets (Alexandrov topology), and $\msf{B}$ maps each topological space to its Borel measure space. Both $\msf{A}$ and $\msf{B}$ act as identities on functions. This works because a monotone function between posets is continuous with respect to the Alexandrov topologies. Similarly, a continuous function between topological spaces is measurable with respect to the Borel $\sigma$-algebras. 
+    
+    To show that $\msf{A}$ is symmetric monoidal, we must exhibit a natural transformation $\widetilde N_{\posetP,\posetQ}: \msf{A} \posetP \times \msf{A} \posetQ \to \msf{A}(\posetP \times \posetQ)$. This map is given by the identity function on $\posetP \times \posetQ$ which is continuous since any upper set in $U \in \upper(\posetP \times \posetQ)$ can be expressed as a union of products of upper sets in $\posetP$ and $\posetQ$, for instance $\bigcup_{p \in \posetP} \{p' : p \leq p'\} \times \{q : (p,q) \in U\}$. The latter is an element of the product of the Alexandrov topologies on $\posetP$ and $\posetQ$.
+    
+     Similarly, $\msf{B}$ is symmetric monoidal because [Kallenberg Lemma 1.2].
+\end{proof}
+
+
+\subsection{Slice functor}\label{subsec:slice-functor}
+This subsection defines the slice functor $\sliceFunctorW$ from small category $\W$ to 2-category of small categories $\CCat$.
+% Built on the uncertainty monads and Kleisli categories discussed in \cref{subsec:uncertainty-monads}, we can build u
+
+\begin{definition}[Slice functor]\label{def:slice-functor}
+    Given a small category $\W$, one can construct the functor $\sliceFunctorW: \W \functorArr \smcat$.
+    On objects, $\sliceFunctorW$ sends each object $X$ in $\W$ to slice category over $X$, $\W\sliceWith{X}$.
+    On morphisms, $\sliceFunctorW$ sends each morphism $f: X \to Y$ in $\W$ to the post-compose functor $\postcomposeFunctor{f}: \W\sliceWith{X} \functorArr \W\sliceWith{Y}$. 
+\end{definition}
+It's straightforward to check the slice functor is well-defined.
+
+If we only assume $\W$ being monoidal, the slice functor $\sliceFunctorW$ will not be lax monoidal, thus not fitting into the change of base scheme discussed in \cref{sec:background}.
+However, because of \cref{prop:strict-markov}, we can consider strict monoidal categories without loss of generality.
+We conjecture that if $\W$ is not strictly monoidal, one may construct a \emph{double category} with the slice functor, instead of a \emph{2-category} as in \cref{sec:background}.
+The results for change of base, however, will not directly apply, and one need to check structures such as being monoidal or closed through definitions for the double category.
+
+\begin{proposition}
+    Given a strict monoidal category $(\W, \prodW, \unitW)$, the slice functor $\sliceFunctorW$ is lax monoidal, equipped with the following coherence functor arrows in $\smcat$.
+    \begin{itemize}[nosep, label=$\vartriangleright$]
+        \item The morphism $\sliceFunWunit: \unitCat \functorArr \WsliceWith{\unitW}$, which maps the single object $*$ to the arrow $\idUnitW: \unitW \to \unitW$, and the identity morphism $\id_*$ to the same arrow $\idUnitW: \unitW \to \unitW$
+        \item the natural transformation $\sliceFunWnatOf{A}{B}: \WsliceWith{A} \prodSmcat \WsliceWith{B} \functorArr \WsliceWith{A \prodW B}$ defined as: 
+        
+        on objects, $\sliceFunWnatOf{A}{B}(x \prodSmcat y) = x \prodW y$, where $x: X \to A$ and $y: Y \to B$ are arrows in $\W$; on morphisms, $\sliceFunWnatOf{A}{B}(f \prodSmcat g) = f \prodW g$, where $f$ and $g$ are arrows in $\WsliceWith{A}$ and $\WsliceWith{B}$, respectively.
+     %    \item the natural transformation $\sliceFunWnatOf{A}{B}: \WsliceWith{A} \prodSmcat \WsliceWith{B} \functorArr \WsliceWith{A \prodW B}$ defined as: on objects, $\sliceFunWnatOf{A}{B}(x \prodSmcat y) = x \prodW y$, where $x: X \to A$ and $y: Y \to B$ are arrows in $\W$; on morphisms, $\sliceFunWnatOf{A}{B}(f \prodSmcat g) = f \prodW g$, where $f$ and $g$ are arrows in $\W$ making the following diagrams commute:
+     %    % https://q.uiver.app/#q=WzAsNixbMCwwLCJYIl0sWzEsMCwiQSJdLFswLDEsIlgnIl0sWzIsMCwiWSJdLFszLDAsIkIiXSxbMiwxLCJZJyJdLFswLDEsIngiXSxbMCwyLCJmIiwyXSxbMiwxLCJ4JyIsMl0sWzMsNCwieSJdLFszLDUsImciLDJdLFs1LDQsInknIiwyXV0=
+     %    \[\begin{tikzcd}[cramped]
+    	% X & A & Y & B \\
+    	% {X'} && {Y'}
+    	% \arrow["x", from=1-1, to=1-2]
+    	% \arrow["f"', from=1-1, to=2-1]
+    	% \arrow["y", from=1-3, to=1-4]
+    	% \arrow["g"', from=1-3, to=2-3]
+    	% \arrow["{x'}"', from=2-1, to=1-2]
+    	% \arrow["{y'}"', from=2-3, to=1-4]
+     %    \end{tikzcd}\]
+    \end{itemize}
+\end{proposition}
+\begin{proof}
+    It is straight forward to check $\sliceFunWnat$ is a well-defined natural transformation in $\smcat$.
+    We focus on proving the conditions for lax monoidal functor in \cref{tikzeq:monoidal-functor}.
+    Translated from 
+\end{proof}
+
+\begin{remark}
+    If $(\W, \prodW, \unitW)$ is only monoidal, not \emph{strict} monoidal, the conditions for lax monoidal functor \cref{tikzeq:monoidal-functor} will only hold up to 2-morphisms in $\smcat$.
+    % This gives rise to a \emph{double category}, instead of \emph{2-category}.
+\end{remark}
+
+\begin{remark}
+    Even if $(\W, \prodW, \unitW)$ is strictly monoidal, $\sliceFunctorW$ cannot become braided/symmetric.
+    The diagram \cref{tikzeq:monoidal-functor-symmetric} only holds up to proper 2-morphisms.
+\end{remark}
+
+Given a category $\C$ enriched in $\W$, change of base along the functor $\sliceFunctorW$ introduces \emph{external parameterization} to category $\C$, where arrows in $\W$ represents parameterization processes.
+
+\begin{definition}[External Parameterization]\label{def:external-para}
+    Given a 
+\end{definition}
+
+Comparing to the \emph{internal parameterization} $\Para$ \cite{fongBackpropFunctorCompositional2019}, where parameterization processes are represented by arrows in $\C$ and restricted by properties of $\C$, we are free to consider different properties by change of base operations.
+For instance, one may require the parameterization process to be \emph{smooth}, even if the original category $\C$ does not pose this constraint.
+
+Nevertheless, if $(\W, \prodW, \unitW)$ forms a \emph{symmetric strict monoidal closed category}, $\Para$ and $\sliceFunctorW$ give rise to equivalent 2-categories.
+
+\begin{proposition}
+    
+\end{proposition}
+
+[For Yujun: The goal of this section is to construct external parameterizations using slice categories.
+\begin{compactitem}
+    \item Define the slice functor $\C/(-) : \C \to \smcat$.
+    \item Prove that it is lax monoidal when the sliced category is strict.
+    \item Explain that when $\C$ is closed, the result is equivalent to Para construction. But argue that (1) external parametrization is more conceptually in line with how we are thinking about the problem; (2) external parametrization allows us to enforce properties of the parametrization (e.g.~smoothness) that are necessary for applications.
+\end{compactitem}
+
+\subsection{Constructions}
+
+\begin{definition}
+    Let $\ProbDP: \Pos \to \smcat$ denote the symmetric monoidal functor given by 
+    \[ \Pos \overset{\Sigma}{\longrightarrow} \Meas \overset{L_\Prob}{\longrightarrow} \Kl_\Prob \overset{\Kl_\Prob \sliceFunctor}{\longrightarrow} \smcat. \]
+\end{definition}
+
+\begin{lemma}
+    Let $L: \Pos \to \smcat$ denote the functor maps each poset $\posetP$ to the discrete category on its underlying set. There is a monoidal transformation $\iota: L \Rightarrow \ProbDP$ with components $\iota_\posetP: \posetP \to \ProbDP(\posetP)$ which send each object $p \in \posetP$ to the delta distribution $\delta_p: * \to (\posetP,\Sigma_\posetP)$.
+\end{lemma}
+% [Yujun: maybe it's possible to not make $L$ discrete, but preserve the poset arrows? Didn't find a method, but might be interesting.]
+
+\section{Application to co-design}\label{sec:learning-dps}
+In this section, we take the category of design problems $\DP$ as an example to show the power of parameteric uncertainty.
+
+\subsection{Representing uncertain design problems}
+[This part explains how the above theory enables us to express uncertainty in DPs and how that uncertainty depends on external factors, such as decisions.
+\begin{compactitem}
+    \item Briefly introduce the main classes of uncertain DPs that will be considered in the following applications. Because of all the work we did previously, it will be sufficient to just name the respective change of base functor we are using for each case. I'd be happy for ideas on better names for these. 
+    \begin{compactitem}
+        \item (Parametric design problems) Vanilla design problems that are externally parametrized. (Change of base from $\DP$ along $\Pos\overset{\Set/(-)}\to \smcat$.) Note that in this case the parametric maps are monotone. A variant of this is to change of base along $\Pos \overset{F} \to \C \overset{\C/(-)}\to \smcat$, where $\mc C$ is some category that has maps with properties one wants to enforce the parametrization. For instance, if we restrict to the subcategory of $\DP$ whose objects are Euclidean spaces, we could choose $F: \Pos \to \mathsf{Diff}$ where the latter is some category of Euclidean spaces and smooth maps. Hence the external parametrization would produce smoothly parameterized DPs which could be more easily be optimized over. Similar ideas might be possible for linear maps, convex maps ect., provided one can convert some subcategory of $\Pos$ into the requisite type of space.
+        \item (Bounded design problems) Parametrized intervals of DPs. (Change of base along $\Pos \to \Kl_I \to \smcat$, where $I$ is the interval monad from above.) Explain how this generalizes the theory in \cite{censi_uncertainty_2017}.
+        \item (Probabilistic design problems) Parametrized distributions of DPs. (Change of base along $\Pos \to \Meas \to \Kl_D \to \smcat$, where $D$ is the distributions monad from above.)
+    \end{compactitem}
+    \item Introduce string diagrams for parametric (uncertain) DPs, where parameter inputs enter from the top and we have two classes of boxes (those representing composite DPs / those representing reparametrization maps). We don't need to be too formal about this, but we should argue why the diagrams are well defined based on the properties of the category of parametric DPs (e.g.~order of composition and reparameterization should not matter).
+    \item Introduce the running example problem and show uses of the above categories for representing uncertainty.
+    \begin{compactitem}
+        \item Parametric DPs can be used to introduce dependencies between the various parts of a composite DP. For example, the problem could be parameterized by a choice of supplier which simultaneously affects several boxes.
+        \item Best/worst case analysis can be performed with bounded DPs.
+        \item Probabilistic DPs can be used to represent randomness (e.g. probability of failure) and quantifiable uncertainty (e.g. lack of precise specs).]
+    \end{compactitem}
+\end{compactitem}
+
+[The remaining parts will illustrate how uncertain DPs enable us to do new things.]
+
+\subsection{Making decisions}
+[Basic decision theory: Given a parametrized (uncertain) DP $\varphi : A \to \DP(P,Q)$, we can make decisions according to 
+$$\argmax{a \in A} U(\varphi(a)),$$
+where $U: \DP(P,Q) \to V$ is some utility function taking values in a poset $V$.
+\begin{compactitem}
+    \item Deciding optimal implementations in vanilla co-design can be expressed using the map $\varphi : I_1 \times \ldots \times I_n \to \DP(P,Q)$ which arises from the composition of DPs parametrized by implementation choices. Querying the optimal implementations for fixed $q \in Q$ then involves maximizing $\varphi$ according to the utility $U : \DP(P,Q) \to (\upper P, \sub)$ given by $\Phi \mapsto {\{ p : (p,q) \in \Phi\}}$.
+    \item Given a bounded or probabilistic DP $\varphi : A \to \DP(P,Q)$, we could choose optimal $a \in A$ based on a utility that takes into account both the quality and variation in the uncertain DP. For example, in the case of bounds, one could optimize $U: (\Phi_l,\Phi_u) \to f(\Phi_l,\Phi_u)$, where $f$ is some function that calculates both the width of the interval and its midpoint. In this way, one trades off risk and average value in the choice of action. In the case of distributions, one can build even more detailed utilities that express ones preferences, including risk aversion.]
+\end{compactitem}
+
+\subsection{Learning design problems}
+[This section will explain how parametric uncertain DPs can be used to learn DPs from data and or for approximation.
+\begin{compactitem}
+    \item Explain need for approximation (e.g.~for fast solving). 
+    \begin{compactitem}
+        \item Current solver uses discrete bounded DPs to approximate. These could be viewed as parametric in choices like the number and choice of sample-points. Ideally, we would like to choose these parameters to balance the quality of approximation with the complexity of the resulting problem. The construction gives a map that sends the choices of approximation parameters for each component to the composite approximate DP. In principle, one could then optimize over approximation parameters to get the best approximation with minimal complexity (although doing so directly would not help, since it involves computing the composite for every choice). If there is a way around that, it would be an improvement over the current approach, where the approximations are chosen separately for each component in advance.
+        \item Future solution methods could choose a different family of approximating bounded DPs (having bounds allows to still get guarantees).
+    \end{compactitem}
+    \item Explain need for learning DPs from data.
+    \begin{compactitem}
+        \item Data might be generated from a simulator.
+        \item Data might be historical or from related sources (e.g. a team might want to estimate co-design constraints based on past performance).
+    \end{compactitem}
+    
+\end{compactitem}
+
+\subsubsection{Optimization}
+[Describe learning using optimization techniques.
+\begin{compactitem}
+    \item Given a parametric DP $\varphi: A \to \DP(P,Q)$, and a loss function $L: \DP(P,Q) \times \DP(P,Q) \to \Reals$, we can approximate a target DP $x: 1 \to \DP(P,Q)$ by minimizing $\varphi \times x : A \times 1 \to  \DP(P,Q) \times \DP(P,Q) \to \Reals$. For instance, $L$ might be given by some metric. One could also do a similar thing for probabilistic DPs where one chooses $L: D\DP(P,Q) \times D\DP(P,Q) \to \R$ to be (e.g.) the KL-divergence, resulting in a form of variational inference ($D$ i).
+    \item Similarly, given a parametric DP $\varphi: A \to \DP(P,Q)$, and a loss function $L: X \times \DP(P,Q) \to \Reals$, where $X$ represents a space of datasets, we can learn by optimizing $\varphi \times x : A \times 1 \to  D \times \DP(P,Q) \to \Reals$, where $x: 1 \to X$ is the map that picks out the observed dataset. Again, $L$ might com from some metric. In the case of probabilistic DPs, we can use $L: X \times D\DP(P,Q) \to \R$. We might e.g.~use the likelihood of the observed data under the distribution of DPs to chose the most likely parameter value.]
+\end{compactitem}
+
+\subsubsection{Bayesian inference}
+[Given a probabilistic DP $\varphi: A \to \DP(P,Q)$, a prior $p: 1 \to A$ on $A$, and a likelihood for observing data from a given DP $l:\DP(P,Q) \to X$ (all these maps in $\BorelStoch$), we can obtain a Bayesian inverse $X \to A$ that expresses the conditional probability of $A$ given that we observe $x \in X$.  See \cite{cho_disintegration_2019} for general details. It is easiest to explain this with string diagrams, but here is the idea:
+
+First we compose $p$ with the copy map on $A$ to get $1 \to A \otimes A$. Then we compose one of the copies with $A \to \DP(P,Q) \to X$ to get a joint distribution $1 \to A \otimes X$. Finally, we condition on $X$ to get the Bayesian inverse. For this to work, we need to be in $\BorelStoch$, which can be ensured by restricting $\DP$ to posets whose corresponding Alexandrov topology is a Polish space. Examples include discrete spaces, $\R$, open and closed subsets thereof, product of Polish spaces.]
+
+\subsubsection{Active learning with surrogates}
+[We can apply the above learning techniques in an iterative fashion to get a method for actively learning a DP. More details to follow.]
+
+\section{Further applications}
+
+\subsection{Learning networks}
+
+\subsection{Imprecise probability}
+
+
+% \nocite{*}
+\bibliographystyle{eptcs}
+\bibliography{generic}
+\end{document}

@@ -1,0 +1,268 @@
+\providecommand{\event}{ACT 2025} % Name of the event you are submitting to
+
+\usepackage{iftex}
+
+\ifpdf
+  \usepackage{underscore}         % Only needed if you use pdflatex.
+  \usepackage[T1]{fontenc}        % Recommended with pdflatex
+\else
+  \usepackage{breakurl}           % Not needed if you use pdflatex only.
+\fi
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[font=small,labelfont=bf]{caption}
+
+\usepackage{caption}
+\usepackage{paralist} % for compactitem
+\usepackage{csquotes}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\usepackage{mathtools}
+\usepackage{IEEEtrantools}
+
+\usepackage{eucal}
+\usepackage{bbm}
+\usepackage{stmaryrd} %fatsemi
+\usepackage{bbm} % blackboard bold numbers
+
+\usepackage{trimclip}
+
+\interdisplaylinepenalty = 2500
+
+\usepackage{scalerel}
+
+\usepackage[dvipsnames]{xcolor}
+\definecolor{darkgreen}{RGB}{35, 89, 52}
+\definecolor{paleorange}{RGB}{255, 236, 207}
+\definecolor{paleyellow}{RGB}{255, 252, 217}
+\definecolor{paleteal}{RGB}{223, 245, 243}
+\definecolor{palered}{RGB}{255, 234, 232}
+\definecolor{palepurple}{RGB}{238, 219, 255}
+
+\usepackage{graphicx}
+\graphicspath{ {./images/} }
+
+\usepackage{hyperref}
+\hypersetup{
+	colorlinks=true,
+	linkcolor=darkgreen,
+	filecolor=magenta,      
+	urlcolor=MidnightBlue,
+	citecolor=darkgreen,
+	pdftitle={} %Add title
+}
+
+\usepackage{quiver} % For commutative diagrams
+
+\usepackage{enumitem} % For list spacing
+
+\usepackage{cleveref} % load cleverref in the end, after all other packages
+
+
+% \usepackage[
+% backend=biber,
+% maxbibnames=50,
+% style=eptcs]{biblatex}
+% \addbibresource{generic.bib}
+
+%NOTE: does not work for Bibtex. EPTCS citations style is only available in bibtex format.
+%Remove In: from journal articles
+% \renewbibmacro{in:}{%
+%   \ifentrytype{article}{}{\printtext{\bibstring{in}\intitlepunct}}}
+
+
+%%% Theorem Styles %%%
+\theoremstyle{definition}
+
+\newtheorem{counter}{Definition}[section]
+
+\newtheorem{definitionx}[counter]{Definition}
+\newenvironment{definition}
+  {\pushQED{\qed}\renewcommand{\qedsymbol}{$\triangleleft$}\definitionx}
+  {\popQED\enddefinitionx}
+
+\theoremstyle{plain} 
+\newtheorem{lemma}[counter]{Lemma}
+
+\theoremstyle{plain} 
+\newtheorem{proposition}[counter]{Proposition}
+
+\theoremstyle{plain}
+\newtheorem{theorem}[counter]{Theorem}
+
+\theoremstyle{plain}
+\newtheorem{question}[counter]{Question}
+
+\theoremstyle{plain}
+\newtheorem{problem}[counter]{Problem}
+
+\theoremstyle{remark}
+\newtheorem{examplex}[counter]{Example}
+\newenvironment{example}
+  {\pushQED{\qed}\renewcommand{\qedsymbol}{$\diamond$}\examplex}
+  {\popQED\endexamplex}
+
+\newtheorem*{excont}{Example \continuation}
+\newcommand{\continuation}{??}
+\newenvironment{continueexample}[1]
+{\renewcommand{\continuation}{\ref{#1}}\excont[continued]}
+{\endexcont}
+
+\theoremstyle{remark}
+\newtheorem{counterexamplex}[counter]{Counterexample}
+\newenvironment{counterexample}
+  {\pushQED{\qed}\renewcommand{\qedsymbol}{$\diamond$}\counterexamplex}
+  {\popQED\endcounterexamplex}
+
+\theoremstyle{remark}
+\newtheorem{remark}[counter]{Remark}
+
+%%% Convenience Macros %%
+\newcommand{\mc}[1]{\mathcal{#1}}
+\newcommand{\msf}[1]{\mathsf{#1}}
+\newcommand{\mbf}[1]{\mathbf{#1}}
+\newcommand{\mbb}[1]{\mathbb{#1}} 
+
+% Sets
+\newcommand{\Reals}{\mathbb{R}}
+
+\newcommand{\sub}{\subseteq}
+\newcommand{\then}{\fatsemi}
+
+\newcommand{\upper}{\mathsf{U}}
+
+\newcommand{\Ob}{\mathsf{Ob}}
+
+\newcommand{\argmax}[1]{\underset{#1}{\text{argmax }}}
+
+% Categories
+\newcommand{\functorArr}{\to}
+
+\newcommand{\cat}[1]{\mathcal{#1}}
+\newcommand{\functor}[1]{\mathsf{#1}}
+\newcommand{\twocat}[2]{\mathbb{#1}\mathsf{#2}}
+
+\newcommand{\C}{\cat{C}}
+\newcommand{\D}{\cat{D}}
+\newcommand{\E}{\cat{E}}
+\newcommand{\F}{\cat{F}}
+\newcommand{\R}{\cat{R}}
+\newcommand{\Q}{\cat{Q}}
+\newcommand{\V}{\cat{V}}
+\newcommand{\W}{\cat{W}}
+
+\newcommand{\strict}{_{\text{s}}}
+\newcommand{\Cs}{\C\strict}
+\newcommand{\Vs}{\V\strict}
+
+\newcommand{\Kl}{\mathsf{Kl}} % Kleisli category
+\newcommand{\Para}{\mathbf{Para}}
+\newcommand{\ExPara}{\mathbf{ExPara}}
+\newcommand{\ParaOf}[1]{\Para(#1)}
+\newcommand{\ExPaOf}[2]{\ExPara(#1; #2)}
+
+% Regular categories
+\newcommand{\Bool}{\mathsf{Bool}}
+\newcommand{\Pos}{\mathsf{Pos}}
+\newcommand{\Set}{\mathsf{Set}}
+\newcommand{\Top}{\mathsf{Top}}
+\newcommand{\smcat}{\mathsf{cat}} %The category of small categories and functors
+\newcommand{\Meas}{\mathsf{Meas}}
+\newcommand{\DP}{\mathsf{DP}}
+\newcommand{\Stoch}{\mathsf{Stoch}}
+\newcommand{\BorelStoch}{\mathsf{BorelStoch}}
+
+% Markov Categories
+\newcommand{\Markov}{\mathsh{Markov}}
+\newcommand{\detSubCat}{_\text{det}}
+\newcommand{\copyMor}{\mathsf{cp}}
+\newcommand{\delMor}{\mathsf{del}}
+
+
+\newcommand{\SigAlg}{\Sigma}
+\newcommand{\interval}[2]{[#1, #2]}
+
+% monoidal product in certain categories
+\newcommand{\prodSmcat}{\times}
+\newcommand{\prodW}{\otimes}
+
+% general functors
+\newcommand{\functorF}{\functor{F}}
+
+% Named functors
+\newcommand{\ProbDP}{\functor{ProbDP}}
+\newcommand{\PowNoEmpty}{\functor{Pow \backslash \varnothing}}
+\newcommand{\Prob}{\functor{P}}
+\newcommand{\Arr}{\functor{Arr}}
+\newcommand{\TwiArr}{\functor{TwiArr}}
+\newcommand{\leftFunctor}{\functor{L}}
+
+% 2-cateogries
+\newcommand{\CCat}{\twocat{C}{at}} %The 2-category of small categories, functors and natural transformations.
+\newcommand{\MMoncat}{\twocat{M}{oncat}} %The 2-category of small monoidal categories, lax monoidal functors, and monoidal transformations
+\newcommand{\TTwocat}{\mathbbm{2}\mathsf{cat}} %The 2-category of 2-categories, 2-functors, and 2-natural transformations. (i.e Cat-cat).
+\newcommand{\VCat}{\twocat{V}{cat}}
+\newcommand{\WCat}{\twocat{W}{cat}}
+
+\newcommand{\CC}{\twocat{C}{}}
+\newcommand{\DD}{\twocat{D}{}}
+\newcommand{\EE}{\twocat{E}{}}
+
+% Diagramitic composition symbols
+% new \oset macro for less vertical space:
+\makeatletter
+\newcommand{\oset}[3][0ex]{%
+  \mathrel{\mathop{#3}\limits^{
+    \vbox to#1{\kern-2.2\ex@
+    \hbox{$\scriptstyle#2$}\vss}}}}
+\makeatother
+\newcommand{\vertthen}{{\oset{\diamond}{\text{{\clipbox{0 0 0 3.4pt}{$\fatsemi$}}}}}}
+\newcommand{\horthen}{{\oset{\star}{\text{{\clipbox{0 0 0 3.4pt}{$\fatsemi$}}}}}}
+
+\newcommand{\op}[1]{#1^{\text{op}}}
+\newcommand{\id}{\mathsf{id}}
+\newcommand{\Id}{\mathsf{Id}}
+
+% for monads
+\newcommand{\monadM}{\functor{M}}
+\newcommand{\monadUnit}{\eta}
+\newcommand{\monadMul}{\mu}
+\newcommand{\monadTup}{(\monadM, \monadMul, \monadUnit)}
+\newcommand{\symMonadMor}{\nabla}
+\newcommand{\symMonadMorOf}[2]{\symMonadMor_{#1,#2}}
+
+% slice functors and utilities
+\newcommand{\sliceWith}[1]{/#1}
+\newcommand{\sliceFunctor}{\sliceWith{(-)}}
+
+\newcommand{\WsliceWith}[1]{\W\sliceWith{#1}}
+\newcommand{\sliceFunctorW}{\W \sliceFunctor}
+\newcommand{\WsliceCat}{{\W\sliceWith{(-)}}}
+
+\newcommand{\sliceFunWunit}{\sliceFunctorW_\epsilon}
+\newcommand{\sliceFunWnat}{\widetilde \sliceFunctorW}
+\newcommand{\sliceFunWnatOf}[2]{\sliceFunWnat_{#1, #2}}
+
+\newcommand{\preCompose}[1]{{#1 \then (-)}}
+\newcommand{\postCompose}[1]{(-) \then #1}
+
+\newcommand{\precomposeFunctor}[1]{\preCompose{#1}}
+\newcommand{\postcomposeFunctor}[1]{\postCompose{#1}}
+
+\newcommand{\unitObj}{1}
+\newcommand{\unitOf}[1]{\unitObj_#1}
+\newcommand{\unitW}{I_\W}
+\newcommand{\idUnitW}{\id_{\unitW}}
+\newcommand{\unitCat}{\unitOf{{\CCat}}}
+
+% posets
+\newcommand{\posetP}{P}
+\newcommand{\posetQ}{Q}
+\newcommand{\posetleq}{\preceq}
+
+% arrow styles
+\newcommand{\elementTo}{\mapsto}
